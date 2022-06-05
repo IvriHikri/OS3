@@ -23,13 +23,14 @@ bool isEmpty(Queue queue){
 void enqueue(Queue queue, int new_fd){
     printf("reached enqueue");
     pthread_mutex_lock(&m);
-    Queue tmp = queue->next;
+    Queue tmp = queue;
     while(tmp->next!=NULL)
     {
         tmp=tmp->next;
     }
     Queue new_node = malloc(sizeof(*queue));
     new_node->next=NULL;
+    new_node->connfd=new_fd;
     tmp->next=new_node;
     queue_size++;
     pthread_cond_signal(&c);

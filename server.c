@@ -30,12 +30,14 @@ void getargs(int *port,int* pool_size, int argc, char *argv[])
 
 void* worker(void* Queues){
 
+    while(1){
     struct Queues queues=* ((struct Queues*)Queues);
     int connfd = dequeue(queues.waiting_queue);
     enqueue(queues.working_queue,connfd);
-    printf("reached line 36");
     requestHandle(connfd);
+    Close(connfd);
     queueRemove(queues.working_queue,connfd);
+    }
 }
 
 int main(int argc, char *argv[])
@@ -69,8 +71,6 @@ int main(int argc, char *argv[])
 	// Save the relevant info in a buffer and have one of the worker threads 
 	// do the work. 
 	// 
-
-	Close(connfd);
     }
 
 }
