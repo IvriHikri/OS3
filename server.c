@@ -28,15 +28,13 @@ void getargs(int *port,int* pool_size, int argc, char *argv[])
     *pool_size = atoi(argv[2]);
 }
 
-void* worker(void* Queues){
+void* worker(void* temp){
 
     while(1){
-    struct Queues queues=* ((struct Queues*)Queues);
-    int connfd = dequeue(queues.waiting_queue);
-    enqueue(queues.working_queue,connfd);
+    int connfd = addToWorkingQueue();
     requestHandle(connfd);
     Close(connfd);
-    queueRemove(queues.working_queue,connfd);
+    dequeueFromWorkingQueue(connfd);
     }
 }
 
@@ -48,13 +46,10 @@ int main(int argc, char *argv[])
     getargs(&port,&pool_size, argc, argv);
     printf("got args");
     //Craete threads
-    Queue waiting_queue = CreateQueue();
-    Queue working_queue= CreateQueue();
-    printf("initializing 2 queues");
-    struct Queues queues = {waiting_queue,working_queue};
+    CreateQueue();
     pthread_t *thread_pool = malloc(sizeof(*thread_pool)*pool_size);
     for(int i=0;i<pool_size;i++){
-         pthread_create(&thread_pool[i],NULL,worker,(void*)&queues);
+         pthread_create(&thread_pool[i],NULL,worker,NULL);
     }
     printf("finished initialized threads");
     //Create queues
@@ -64,7 +59,7 @@ int main(int argc, char *argv[])
 	clientlen = sizeof(clientaddr);
 	connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
     printf("accept client");
-    enqueue(waiting_queue,connfd);
+    addToWaitingQueue(connfd);
     
 	// 
 	// HW3: In general, don't handle the request in the main thread.

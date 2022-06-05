@@ -1,9 +1,10 @@
 #include <stdbool.h>
 typedef struct queue_t* Queue;
 
-Queue CreateQueue();
-bool isEmpty(Queue queue);
-void enqueue(Queue queue, int new_fd);
-int dequeue(Queue queue);
-void queueRemove(Queue queue,int connfd);
-void destroyQueue(Queue queu);
+void CreateQueue();
+bool isEmpty();
+void addToWaitingQueue(int new_fd);
+int addToWorkingQueue();
+void dequeueFromWorkingQueue(int connfd);
+void queueRemove(Queue queue,int connfd); //not in use at the moment
+void destroyQueue(Queue queue);
