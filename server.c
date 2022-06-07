@@ -18,14 +18,16 @@ struct Queues{
     Queue working_queue;
 };
 
-void getargs(int *port,int* pool_size, int argc, char *argv[])
+void getargs(int *port,int* pool_size, int* queue_size, char** policy, int argc, char *argv[])
 {
-    if (argc < 2) {
-	fprintf(stderr, "Usage: %s <port>\n", argv[0]);
-	exit(1);
-    }
-    *port = atoi(argv[1]);
-    *pool_size = atoi(argv[2]);
+    //if (argc < 2) {
+	//fprintf(stderr, "Usage: %s <port>\n", argv[0]);
+	//exit(1);
+    //}
+    //*port = atoi(argv[1]);
+    //*pool_size = atoi(argv[2]);
+    //*queue_size= atoi(argv[3]);
+    //*policy=argv[4];
 }
 
 void* worker(void* temp){
@@ -40,25 +42,27 @@ void* worker(void* temp){
 
 int main(int argc, char *argv[])
 {
-    int listenfd, connfd, port, clientlen, pool_size;
+    int listenfd, connfd, port, clientlen, pool_size,queue_size;
     struct sockaddr_in clientaddr;
+    char* policy;
 
-    getargs(&port,&pool_size, argc, argv);
-    printf("got args");
+    getargs(&port,&pool_size,&queue_size, &policy, argc, argv);
+    port= 4024;
+    pool_size=3;
+    queue_size=2;
+    policy="random";
     //Craete threads
-    CreateQueue();
+    CreateQueue(queue_size, policy);
     pthread_t *thread_pool = malloc(sizeof(*thread_pool)*pool_size);
     for(int i=0;i<pool_size;i++){
          pthread_create(&thread_pool[i],NULL,worker,NULL);
     }
-    printf("finished initialized threads");
     //Create queues
 
     listenfd = Open_listenfd(port);
     while (1) {
 	clientlen = sizeof(clientaddr);
 	connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
-    printf("accept client");
     addToWaitingQueue(connfd);
     
 	// 

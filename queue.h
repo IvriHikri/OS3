@@ -1,7 +1,7 @@
 #include <stdbool.h>
 typedef struct queue_t* Queue;
 
-void CreateQueue();
+void CreateQueue(int queue_max_size, char* policy);
 bool isEmpty();
 void addToWaitingQueue(int new_fd);
 int addToWorkingQueue();

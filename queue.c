@@ -2,6 +2,8 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "segel.h"
+#include <math.h>
 pthread_cond_t c;
 pthread_mutex_t m; 
 int queue_size=0;
@@ -14,7 +16,19 @@ struct queue_t{
     int connfd;
 };
 
-void CreateQueue(){
+int max_queue_size =0;
+char* overload_policy=NULL; 
+
+int random_num(int min, int max){
+   return min + rand() / (RAND_MAX / (max - min + 1) + 1);
+}
+int our_ceil(double num){
+    int a= (int)num;
+    if(num-(double)a<=1e-6)
+    return a;
+    return a+1;
+}
+void CreateQueue(int queue_max_size, char* policy){
     pthread_cond_init(&c,NULL);
     pthread_mutex_init(&m,NULL);
     waiting_queue = malloc(sizeof(*waiting_queue));
@@ -24,13 +38,59 @@ void CreateQueue(){
     working_queue = malloc(sizeof(*working_queue));
     working_queue->connfd=-1;
     working_queue->next=NULL;
+    max_queue_size=queue_max_size;
+    overload_policy=policy;
 }
 bool isEmpty(){
     return queue_size==0;
 }
 void addToWaitingQueue(int new_fd){
-    printf("reached enqueue");
     pthread_mutex_lock(&m);
+    if(strcmp(overload_policy,"block")==0){
+        while(queue_size==max_queue_size){
+            pthread_cond_wait(&c, &m);
+        }
+    }
+    if(strcmp(overload_policy,"dt")==0){
+        if(queue_size==max_queue_size){
+            Close(new_fd);
+            pthread_mutex_unlock(&m);
+            return;
+        }
+    }
+    if(strcmp(overload_policy,"random")==0){
+        printf("entered random policy\n");
+        if(queue_size==max_queue_size){
+            double to_drop=our_ceil((double)queue_size*0.3);
+            if(waiting_size==0){
+                Close(new_fd);
+                pthread_mutex_unlock(&m);
+                return;
+            }
+            int i=waiting_size;
+            while(to_drop>0 && i>0){
+                if(waiting_queue->next==NULL)
+                    break;
+                int to_delete=random_num(1,i);
+                int j=0;    
+                Queue to_remove=waiting_queue;
+                Queue temp=waiting_queue;
+                while(j<to_delete){
+                to_remove=temp;
+                temp=temp->next;
+                j++;
+                }
+            temp->next=to_remove->next->next;
+            Close(to_remove->next->connfd);
+            free(to_remove->next);
+            to_drop--;
+            i--;
+            waiting_size--;
+            queue_size--;     
+            }
+        }
+    }
+    printf("After policy\n");
     Queue tmp = waiting_queue;
     while(tmp->next!=NULL)
     {
@@ -95,6 +155,7 @@ void dequeueFromWorkingQueue(int connfd){
     free(to_remove->next);
     queue_size--;
     working_size--;
+    pthread_cond_broadcast(&c);
     pthread_mutex_unlock(&m);
 }
 
