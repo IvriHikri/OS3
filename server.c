@@ -2,6 +2,7 @@
 #include "request.h"
 #include <pthread.h>
 #include "queue.h"
+#include "stats.h"
 // 
 // server.c: A very, very simple web server
 //
@@ -20,23 +21,35 @@ struct Queues{
 
 void getargs(int *port,int* pool_size, int* queue_size, char** policy, int argc, char *argv[])
 {
-    //if (argc < 2) {
-	//fprintf(stderr, "Usage: %s <port>\n", argv[0]);
-	//exit(1);
-    //}
-    //*port = atoi(argv[1]);
-    //*pool_size = atoi(argv[2]);
-    //*queue_size= atoi(argv[3]);
-    //*policy=argv[4];
+    if (argc < 2) {
+	fprintf(stderr, "Usage: %s <port>\n", argv[0]);
+	exit(1);
+    }
+    *port = atoi(argv[1]);
+    *pool_size = atoi(argv[2]);
+    *queue_size= atoi(argv[3]);
+    *policy=argv[4];
 }
 
-void* worker(void* temp){
+void* worker(void* id){
 
+    int thread_id= *(int*)id;
+    int request_count = 0;
+    int static_request_count = 0;
+    int dynamic_request_count=0;
     while(1){
-    int connfd = addToWorkingQueue();
-    requestHandle(connfd);
-    Close(connfd);
-    dequeueFromWorkingQueue(connfd);
+    struct stats current_request = addToWorkingQueue();
+    current_request.thread_id=thread_id;
+    current_request.request_count = request_count;
+    current_request.static_request_count = static_request_count;
+    current_request.dynamic_request_count = dynamic_request_count;
+
+    //Calculate dispatch time
+    gettimeofday(&current_request.dispatch_time,NULL);
+    requestHandle(current_request,&static_request_count,&dynamic_request_count);
+    Close(current_request.connfd);
+    dequeueFromWorkingQueue(current_request.connfd);
+    request_count++;
     }
 }
 
@@ -47,23 +60,22 @@ int main(int argc, char *argv[])
     char* policy;
 
     getargs(&port,&pool_size,&queue_size, &policy, argc, argv);
-    port= 4024;
-    pool_size=3;
-    queue_size=2;
-    policy="random";
     //Craete threads
     CreateQueue(queue_size, policy);
     pthread_t *thread_pool = malloc(sizeof(*thread_pool)*pool_size);
     for(int i=0;i<pool_size;i++){
-         pthread_create(&thread_pool[i],NULL,worker,NULL);
+         pthread_create(&thread_pool[i],NULL,worker,&i);
     }
     //Create queues
 
     listenfd = Open_listenfd(port);
     while (1) {
+    struct timeval arrival_time_tv;
 	clientlen = sizeof(clientaddr);
 	connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
-    addToWaitingQueue(connfd);
+    gettimeofday(&arrival_time_tv,NULL);
+    struct stats thread_stat= { connfd, arrival_time_tv,{0,0},-1,-1,-1,-1 };
+    addToWaitingQueue(thread_stat);
     
 	// 
 	// HW3: In general, don't handle the request in the main thread.

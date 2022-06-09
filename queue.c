@@ -13,7 +13,7 @@ Queue waiting_queue=NULL;
 Queue working_queue=NULL;
 struct queue_t{
     struct queue_t* next;
-    int connfd;
+    struct stats request;
 };
 
 int max_queue_size =0;
@@ -32,11 +32,11 @@ void CreateQueue(int queue_max_size, char* policy){
     pthread_cond_init(&c,NULL);
     pthread_mutex_init(&m,NULL);
     waiting_queue = malloc(sizeof(*waiting_queue));
-    waiting_queue->connfd=-1;
+    waiting_queue->request.connfd=-1;
     waiting_queue->next=NULL;
 
     working_queue = malloc(sizeof(*working_queue));
-    working_queue->connfd=-1;
+    working_queue->request.connfd=-1;
     working_queue->next=NULL;
     max_queue_size=queue_max_size;
     overload_policy=policy;
@@ -44,7 +44,7 @@ void CreateQueue(int queue_max_size, char* policy){
 bool isEmpty(){
     return queue_size==0;
 }
-void addToWaitingQueue(int new_fd){
+void addToWaitingQueue(struct stats new_req){
     pthread_mutex_lock(&m);
     if(strcmp(overload_policy,"block")==0){
         while(queue_size==max_queue_size){
@@ -53,7 +53,7 @@ void addToWaitingQueue(int new_fd){
     }
     if(strcmp(overload_policy,"dt")==0){
         if(queue_size==max_queue_size){
-            Close(new_fd);
+            Close(new_req.connfd);
             pthread_mutex_unlock(&m);
             return;
         }
@@ -63,7 +63,7 @@ void addToWaitingQueue(int new_fd){
         if(queue_size==max_queue_size){
             double to_drop=our_ceil((double)queue_size*0.3);
             if(waiting_size==0){
-                Close(new_fd);
+                Close(new_req.connfd);
                 pthread_mutex_unlock(&m);
                 return;
             }
@@ -81,7 +81,7 @@ void addToWaitingQueue(int new_fd){
                 j++;
                 }
             temp->next=to_remove->next->next;
-            Close(to_remove->next->connfd);
+            Close(to_remove->next->request.connfd);
             free(to_remove->next);
             to_drop--;
             i--;
@@ -98,7 +98,7 @@ void addToWaitingQueue(int new_fd){
     }
     Queue new_node = malloc(sizeof(*new_node));
     new_node->next=NULL;
-    new_node->connfd=new_fd;
+    new_node->request=new_req;
     tmp->next=new_node;
     queue_size++;
     waiting_size++;
@@ -106,13 +106,13 @@ void addToWaitingQueue(int new_fd){
     pthread_mutex_unlock(&m);
 }
 
-int addToWorkingQueue(){
+struct stats addToWorkingQueue(){
     pthread_mutex_lock(&m);
     while(waiting_size==0){
         pthread_cond_wait(&c,&m);
     }
     Queue to_remove= waiting_queue->next;
-    int fd_to_return=to_remove->connfd;
+    struct stats request_to_return = to_remove->request;
     if(to_remove->next==NULL){
         free(to_remove);
         waiting_queue->next=NULL;
@@ -129,12 +129,12 @@ int addToWorkingQueue(){
     }
     Queue new_node = malloc(sizeof(*new_node));
     new_node->next=NULL;
-    new_node->connfd=fd_to_return;
+    new_node->request=request_to_return;
     tmp->next=new_node;
     working_size++;
     pthread_cond_signal(&c);
     pthread_mutex_unlock(&m);
-    return fd_to_return;
+    return request_to_return;
 }
 
 void dequeueFromWorkingQueue(int connfd){
@@ -145,7 +145,7 @@ void dequeueFromWorkingQueue(int connfd){
     Queue to_remove;
     Queue temp=working_queue;
     while(temp->next!=NULL){
-        if(temp->next->connfd==connfd){
+        if(temp->next->request.connfd==connfd){
             to_remove=temp;
             break;
         }
