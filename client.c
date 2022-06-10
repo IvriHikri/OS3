@@ -71,9 +71,13 @@ void clientPrint(int fd)
   }
 }
 
-void* worker(void* fd){
-  char* filename = "home.html";
-  int clientfd = *(int*)fd;
+void* worker(void* tmp_arg){
+  char** argv = (char**)tmp_arg;
+   char* host = argv[1];
+  int port = atoi(argv[2]);
+  char* filename = argv[3];
+
+  int clientfd = Open_clientfd(host,port);
   clientSend(clientfd, filename);
   clientPrint(clientfd);
   Close(clientfd);
@@ -95,17 +99,15 @@ int main(int argc, char *argv[])
   filename = argv[3];
 
   /* Open a single connection to the specified host and port */
+  int pool_size = 1;
+  //int clients=malloc(sizeof(int)*pool_size);
+  //clientfd = Open_clientfd(host, port);
+ // clients[1] = Open_clientfd(host, port);
+  //clients[2] = Open_clientfd(host, port);
 
-  int clients[3]={};
-  clientfd = Open_clientfd(host, port);
-  clients[0]=clientfd;
-  clients[1] = Open_clientfd(host, port);
-  clients[2] = Open_clientfd(host, port);
-
-  int pool_size=3;
   pthread_t *thread_pool = malloc(sizeof(*thread_pool)*pool_size);
     for(int i=0;i<pool_size;i++){
-         pthread_create(&thread_pool[i],NULL,worker,&clients[i]);
+         pthread_create(&thread_pool[i],NULL,worker,argv);
     }
   for(int i=0;i<pool_size;i++){
       pthread_join(thread_pool[i],NULL);
