@@ -81,7 +81,6 @@ void* worker(void* tmp_arg){
   clientSend(clientfd, filename);
   clientPrint(clientfd);
   Close(clientfd);
-  printf("finished client with fd: %d\n",clientfd);
 }
 int main(int argc, char *argv[])
 {

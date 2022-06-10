@@ -34,6 +34,7 @@ void getargs(int *port,int* pool_size, int* queue_size, char** policy, int argc,
 void* worker(void* id){
 
     int thread_id= *(int*)id;
+    free(id);
     int request_count = 0;
     int static_request_count = 0;
     int dynamic_request_count=0;
@@ -64,7 +65,9 @@ int main(int argc, char *argv[])
     CreateQueue(queue_size, policy);
     pthread_t *thread_pool = malloc(sizeof(*thread_pool)*pool_size);
     for(int i=0;i<pool_size;i++){
-         pthread_create(&thread_pool[i],NULL,worker,&i);
+        int* tmp = malloc(sizeof(*tmp));
+        *tmp=i;
+         pthread_create(&thread_pool[i],NULL,worker,tmp);
     }
     //Create queues
 

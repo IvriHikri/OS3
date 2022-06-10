@@ -28,7 +28,7 @@ void requestError(struct stats stats, char *cause, char *errnum, char *shortmsg,
 
    sprintf(buf, "Content-Length: %lu\r\n\r\n", strlen(body));
 
-      sprintf(buf, "%sStat-Req-Arrival:: %lu.%06lu\r\n", buf,stats.arrival_time.tv_sec,stats.arrival_time.tv_usec);
+   sprintf(buf, "%sStat-Req-Arrival:: %lu.%06lu\r\n", buf,stats.arrival_time.tv_sec,stats.arrival_time.tv_usec);
 
     sprintf(buf, "%sStat-Req-Dispatch:: %lu.%06lu\r\n", buf,stats.dispatch_time.tv_sec,stats.dispatch_time.tv_usec);
 
@@ -135,6 +135,7 @@ void requestServeDynamic(struct stats stats, char *filename, char *cgiargs)
     sprintf(buf, "%sStat-Thread-Static:: %d\r\n", buf,stats.static_request_count);
 
     sprintf(buf, "%sStat-Thread-Dynamic:: %d\r\n\r\n", buf,stats.dynamic_request_count);
+      Rio_writen(fd, buf, strlen(buf));
 
    if (Fork() == 0) {
       /* Child process */

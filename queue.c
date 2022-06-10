@@ -90,7 +90,6 @@ void addToWaitingQueue(struct stats new_req){
             }
         }
     }
-    printf("After policy\n");
     Queue tmp = waiting_queue;
     while(tmp->next!=NULL)
     {
@@ -113,14 +112,8 @@ struct stats addToWorkingQueue(){
     }
     Queue to_remove= waiting_queue->next;
     struct stats request_to_return = to_remove->request;
-    if(to_remove->next==NULL){
-        free(to_remove);
-        waiting_queue->next=NULL;
-    }
-    else{
-        waiting_queue->next=to_remove->next;
-        free(to_remove);
-    }
+    waiting_queue->next=to_remove->next;
+    free(to_remove);
     waiting_size--;
     Queue tmp = working_queue;
     while(tmp->next!=NULL)
@@ -142,17 +135,13 @@ void dequeueFromWorkingQueue(int connfd){
     while(working_size==0){
         pthread_cond_wait(&c,&m);
     }
-    Queue to_remove;
     Queue temp=working_queue;
-    while(temp->next!=NULL){
-        if(temp->next->request.connfd==connfd){
-            to_remove=temp;
-            break;
-        }
+    while(temp->next->request.connfd != connfd){
         temp=temp->next;
     }
-    temp->next=to_remove->next->next;
-    free(to_remove->next);
+    Queue to_remove = temp->next;
+    temp->next=to_remove->next;
+    free(to_remove);
     queue_size--;
     working_size--;
     pthread_cond_broadcast(&c);
