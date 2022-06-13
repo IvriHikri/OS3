@@ -45,6 +45,7 @@ bool isEmpty(){
     return queue_size==0;
 }
 void addToWaitingQueue(struct stats new_req){
+	printf("Waiting_size: %d\n Working_size: %d\n Queue_size: %d\n", waiting_size,working_size,queue_size);
     pthread_mutex_lock(&m);
     if(strcmp(overload_policy,"block")==0){
         while(queue_size==max_queue_size){
@@ -58,10 +59,31 @@ void addToWaitingQueue(struct stats new_req){
             return;
         }
     }
-    if(strcmp(overload_policy,"random")==0){
-        printf("entered random policy\n");
+    if(strcmp(overload_policy,"dh")==0){
         if(queue_size==max_queue_size){
-            double to_drop=our_ceil((double)queue_size*0.3);
+            Queue before_oldest = waiting_queue->next;
+            Queue temp = waiting_queue;
+            printf("before remove oldest\n");
+            while(temp->next!=NULL){
+                if(timercmp(&temp->next->request.arrival_time,&before_oldest->request.arrival_time,<)){
+                    before_oldest=temp;
+                }
+                temp=temp->next;
+            }
+    Queue oldest =  before_oldest->next;
+    before_oldest->next=oldest->next;
+    Close(oldest->request.connfd);
+    free(oldest);
+    queue_size--;
+    waiting_size--;
+        }
+        printf("after remove oldest\n");
+    }
+    if(strcmp(overload_policy,"random")==0){
+        if(queue_size==max_queue_size){
+			printf("Waiting size is: %d\n",waiting_size);
+            int to_drop=our_ceil((double)queue_size*0.3);
+            printf("dropping %d clients\n",to_drop);
             if(waiting_size==0){
                 Close(new_req.connfd);
                 pthread_mutex_unlock(&m);
@@ -72,17 +94,16 @@ void addToWaitingQueue(struct stats new_req){
                 if(waiting_queue->next==NULL)
                     break;
                 int to_delete=random_num(1,i);
-                int j=0;    
-                Queue to_remove=waiting_queue;
+                int j=1;    
                 Queue temp=waiting_queue;
                 while(j<to_delete){
-                to_remove=temp;
                 temp=temp->next;
                 j++;
                 }
-            temp->next=to_remove->next->next;
-            Close(to_remove->next->request.connfd);
-            free(to_remove->next);
+           Queue to_remove=temp->next;
+           temp->next = to_remove->next;
+            Close(to_remove->request.connfd);
+            free(to_remove);
             to_drop--;
             i--;
             waiting_size--;

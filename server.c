@@ -13,11 +13,6 @@
 // Most of the work is done within routines written in request.c
 //
 
-// HW3: Parse the new arguments too
-struct Queues{
-    Queue waiting_queue;
-    Queue working_queue;
-};
 
 void getargs(int *port,int* pool_size, int* queue_size, char** policy, int argc, char *argv[])
 {
@@ -39,6 +34,7 @@ void* worker(void* id){
     int static_request_count = 0;
     int dynamic_request_count=0;
     while(1){
+	request_count++;
     struct stats current_request = addToWorkingQueue();
     current_request.thread_id=thread_id;
     current_request.request_count = request_count;
@@ -46,11 +42,12 @@ void* worker(void* id){
     current_request.dynamic_request_count = dynamic_request_count;
 
     //Calculate dispatch time
-    gettimeofday(&current_request.dispatch_time,NULL);
+    struct timeval pickup_time;
+	 gettimeofday(&pickup_time,NULL);
+	timersub(&pickup_time,&current_request.arrival_time,&current_request.dispatch_time);
     requestHandle(current_request,&static_request_count,&dynamic_request_count);
     Close(current_request.connfd);
     dequeueFromWorkingQueue(current_request.connfd);
-    request_count++;
     }
 }
 
@@ -60,7 +57,12 @@ int main(int argc, char *argv[])
     struct sockaddr_in clientaddr;
     char* policy;
 
-    getargs(&port,&pool_size,&queue_size, &policy, argc, argv);
+ getargs(&port,&pool_size,&queue_size, &policy, argc, argv);
+   /* port = 8000;
+    * policy = "random";
+    queue_size=10;
+    pool_size=1;
+    */
     //Craete threads
     CreateQueue(queue_size, policy);
     pthread_t *thread_pool = malloc(sizeof(*thread_pool)*pool_size);

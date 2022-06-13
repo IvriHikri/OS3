@@ -72,6 +72,8 @@ void clientPrint(int fd)
 }
 
 void* worker(void* tmp_arg){
+	int counter = 10;
+	while(counter>0){
   char** argv = (char**)tmp_arg;
    char* host = argv[1];
   int port = atoi(argv[2]);
@@ -81,6 +83,8 @@ void* worker(void* tmp_arg){
   clientSend(clientfd, filename);
   clientPrint(clientfd);
   Close(clientfd);
+  counter--;
+	}
 }
 int main(int argc, char *argv[])
 {
