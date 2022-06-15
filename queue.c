@@ -45,7 +45,6 @@ bool isEmpty(){
     return queue_size==0;
 }
 void addToWaitingQueue(struct stats new_req){
-	printf("Waiting_size: %d\n Working_size: %d\n Queue_size: %d\n", waiting_size,working_size,queue_size);
     pthread_mutex_lock(&m);
     if(strcmp(overload_policy,"block")==0){
         while(queue_size==max_queue_size){
@@ -63,7 +62,6 @@ void addToWaitingQueue(struct stats new_req){
         if(queue_size==max_queue_size){
             Queue before_oldest = waiting_queue->next;
             Queue temp = waiting_queue;
-            printf("before remove oldest\n");
             while(temp->next!=NULL){
                 if(timercmp(&temp->next->request.arrival_time,&before_oldest->request.arrival_time,<)){
                     before_oldest=temp;
@@ -77,13 +75,10 @@ void addToWaitingQueue(struct stats new_req){
     queue_size--;
     waiting_size--;
         }
-        printf("after remove oldest\n");
     }
     if(strcmp(overload_policy,"random")==0){
         if(queue_size==max_queue_size){
-			printf("Waiting size is: %d\n",waiting_size);
-            int to_drop=our_ceil((double)queue_size*0.3);
-            printf("dropping %d clients\n",to_drop);
+            int to_drop=our_ceil((double)waiting_size*0.3);
             if(waiting_size==0){
                 Close(new_req.connfd);
                 pthread_mutex_unlock(&m);

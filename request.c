@@ -134,7 +134,7 @@ void requestServeDynamic(struct stats stats, char *filename, char *cgiargs)
 
     sprintf(buf, "%sStat-Thread-Static:: %d\r\n", buf,stats.static_request_count);
 
-    sprintf(buf, "%sStat-Thread-Dynamic:: %d\r\n\r\n", buf,stats.dynamic_request_count);
+    sprintf(buf, "%sStat-Thread-Dynamic:: %d\r\n", buf,stats.dynamic_request_count);
       Rio_writen(fd, buf, strlen(buf));
 
    int pid;

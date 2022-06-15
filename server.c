@@ -43,8 +43,8 @@ void* worker(void* id){
 
     //Calculate dispatch time
     struct timeval pickup_time;
-	 gettimeofday(&pickup_time,NULL);
-	timersub(&pickup_time,&current_request.arrival_time,&current_request.dispatch_time);
+    gettimeofday(&pickup_time,NULL);
+    timersub(&pickup_time,&current_request.arrival_time,&current_request.dispatch_time);
     requestHandle(current_request,&static_request_count,&dynamic_request_count);
     Close(current_request.connfd);
     dequeueFromWorkingQueue(current_request.connfd);
