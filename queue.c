@@ -60,16 +60,23 @@ void addToWaitingQueue(struct stats new_req){
     }
     if(strcmp(overload_policy,"dh")==0){
         if(queue_size==max_queue_size){
-            Queue before_oldest = waiting_queue->next;
-            Queue temp = waiting_queue;
-            while(temp->next!=NULL){
-                if(timercmp(&temp->next->request.arrival_time,&before_oldest->request.arrival_time,<)){
-                    before_oldest=temp;
-                }
-                temp=temp->next;
-            }
-    Queue oldest =  before_oldest->next;
-    before_oldest->next=oldest->next;
+            //Queue before_oldest = waiting_queue->next;
+            //Queue temp = waiting_queue;
+            //while(temp->next!=NULL){
+                //if(timercmp(&temp->next->request.arrival_time,&before_oldest->request.arrival_time,<)){
+                   // before_oldest=temp;
+                //}
+                //temp=temp->next;
+            //}
+    //Queue oldest =  before_oldest->next;
+    //before_oldest->next=oldest->next;
+    Queue oldest =  waiting_queue->next;
+    if(oldest==NULL){
+	close(new_req.connfd);
+        pthread_mutex_unlock(&m);
+	return;
+	}
+    waiting_queue->next=oldest->next;
     Close(oldest->request.connfd);
     free(oldest);
     queue_size--;
@@ -128,6 +135,9 @@ struct stats addToWorkingQueue(){
     }
     Queue to_remove= waiting_queue->next;
     struct stats request_to_return = to_remove->request;
+    struct timeval pickup_time;
+    gettimeofday(&pickup_time,NULL);
+    timersub(&pickup_time,&request_to_return.arrival_time,&request_to_return.dispatch_time);
     waiting_queue->next=to_remove->next;
     free(to_remove);
     waiting_size--;
